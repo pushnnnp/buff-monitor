@@ -1,13 +1,15 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const axios = require('axios');
 const { WebhookClient, EmbedBuilder } = require('discord.js');
-const path = require('path');
+const path = require('path'); // Import path module
 
 const app = express();
 app.use(bodyParser.json());
+
+// FIX 1: Use path.join to correctly find the folder on Linux
 app.use(express.static(path.join(__dirname, 'public')));
 
 const DATA_FILE = 'items.json';
@@ -25,7 +27,7 @@ function saveItems() {
     fs.writeFileSync(DATA_FILE, JSON.stringify(itemsToWatch, null, 2));
 }
 
-// --- API ENDPOINTS FOR THE WEBSITE ---
+// --- API ENDPOINTS ---
 app.get('/api/items', (req, res) => {
     res.json(itemsToWatch);
 });
@@ -45,7 +47,12 @@ app.delete('/api/items/:id', (req, res) => {
     saveItems();
     res.json({ success: true, items: itemsToWatch });
 });
-// -------------------------------------
+
+// FIX 2: Explicitly serve index.html for the homepage
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+// ---------------------
 
 // --- MONITORING LOGIC ---
 const webhookClient = new WebhookClient({ url: process.env.DISCORD_WEBHOOK_URL });
@@ -88,8 +95,7 @@ async function monitor() {
 }
 
 monitor();
+
+// FIX 3: Use process.env.PORT (Required for Render)
 const PORT = process.env.PORT || 3000;
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
