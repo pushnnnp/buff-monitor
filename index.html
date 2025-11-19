@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buff.163 Monitor</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --accent: #3b82f6;
+            --green: #22c55e;
+            --red: #ef4444;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        h1 { margin-bottom: 30px; font-weight: 800; letter-spacing: -1px; }
+        
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        /* Add Form */
+        .add-form {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        input {
+            background: #334155;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            color: white;
+            flex: 1;
+        }
+        button#addBtn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button#addBtn:hover { opacity: 0.9; }
+
+        /* Item List */
+        .item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .item-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #334155;
+            transition: 0.2s;
+        }
+        .item-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+        
+        .item-info h3 { margin: 0 0 5px 0; font-size: 1.1rem; }
+        .item-info p { margin: 0; color: #94a3b8; font-size: 0.9rem; }
+        .price-tag { color: var(--green); font-weight: bold; }
+
+        .delete-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--red);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+        .delete-btn:hover { background: var(--red); color: white; }
+    </style>
+</head>
+<body>
+
+    <h1>Buff.163 Monitor 📉</h1>
+
+    <div class="container">
+        <div class="add-form">
+            <input type="text" id="itemName" placeholder="Skin Name (e.g. AK Redline)">
+            <input type="text" id="itemId" placeholder="Buff ID (e.g. 33960)">
+            <input type="number" id="maxPrice" placeholder="Max Price (¥)">
+            <button id="addBtn">Add</button>
+        </div>
+
+        <div id="itemList" class="item-list">
+            <!-- Items will load here -->
+        </div>
+    </div>
+
+    <script>
+        async function loadItems() {
+            const res = await fetch('/api/items');
+            const items = await res.json();
+            const list = document.getElementById('itemList');
+            list.innerHTML = '';
+
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'item-card';
+                div.innerHTML = `
+                    <div class="item-info">
+                        <h3>${item.name}</h3>
+                        <p>ID: ${item.id} • Target: <span class="price-tag">¥${item.maxPrice}</span></p>
+                    </div>
+                    <button class="delete-btn" onclick="deleteItem('${item.id}')">Remove</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        async function addItem() {
+            const name = document.getElementById('itemName').value;
+            const id = document.getElementById('itemId').value;
+            const maxPrice = document.getElementById('maxPrice').value;
+
+            if(!name || !id || !maxPrice) return alert("Please fill all fields");
+
+            await fetch('/api/items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, id, maxPrice: parseFloat(maxPrice) })
+            });
+            
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemId').value = '';
+            document.getElementById('maxPrice').value = '';
+            loadItems();
+        }
+
+        async function deleteItem(id) {
+            if(confirm('Stop watching this item?')) {
+                await fetch('/api/items/' + id, { method: 'DELETE' });
+                loadItems();
+            }
+        }
+
+        document.getElementById('addBtn').onclick = addItem;
+        loadItems();
+    </script>
+</body>
+</html>
