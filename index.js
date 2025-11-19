@@ -4,18 +4,16 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const axios = require('axios');
 const { WebhookClient, EmbedBuilder } = require('discord.js');
-const path = require('path'); // Import path module
+const path = require('path');
 
 const app = express();
 app.use(bodyParser.json());
 
-// FIX 1: Use path.join to correctly find the folder on Linux
-app.use(express.static(path.join(__dirname, 'public')));
-
+// --- CONFIGURATION ---
 const DATA_FILE = 'items.json';
 const CHECK_INTERVAL_SECONDS = 60;
 
-// Load items from file
+// Load items
 let itemsToWatch = [];
 try {
     itemsToWatch = JSON.parse(fs.readFileSync(DATA_FILE));
@@ -27,7 +25,14 @@ function saveItems() {
     fs.writeFileSync(DATA_FILE, JSON.stringify(itemsToWatch, null, 2));
 }
 
-// --- API ENDPOINTS ---
+// --- WEBSITE ROUTES ---
+
+// 1. Serve the HTML file from the ROOT directory
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// 2. API Endpoints
 app.get('/api/items', (req, res) => {
     res.json(itemsToWatch);
 });
@@ -47,12 +52,6 @@ app.delete('/api/items/:id', (req, res) => {
     saveItems();
     res.json({ success: true, items: itemsToWatch });
 });
-
-// FIX 2: Explicitly serve index.html for the homepage
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-// ---------------------
 
 // --- MONITORING LOGIC ---
 const webhookClient = new WebhookClient({ url: process.env.DISCORD_WEBHOOK_URL });
@@ -86,7 +85,7 @@ async function monitor() {
                     .setColor(0x00FF00)
                     .setDescription(`**Price: ¥${price}** (Target: ¥${item.maxPrice})`)
                     .addFields({ name: 'Link', value: `[Buy Now](https://buff.163.com/goods/${item.id})` });
-                
+
                 await webhookClient.send({ embeds: [embed] });
             }
             await new Promise(r => setTimeout(r, 2000));
@@ -96,6 +95,5 @@ async function monitor() {
 
 monitor();
 
-// FIX 3: Use process.env.PORT (Required for Render)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
